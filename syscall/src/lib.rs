@@ -20,6 +20,8 @@ pub const SECP256R1_DOUBLE: u32 = 0x00_00_01_2D;
 pub const SECP256R1_DECOMPRESS: u32 = 0x00_00_01_2E;
 pub const UINT256_MUL: u32 = 0x00_01_01_1D;
 
+pub const PHANTOM_LOG_PC_CYCLE: u32 = 0x00_00_00_03;
+
 pub const KECCAK_STATE_WORDS: usize = 25;
 
 /// Based on https://github.com/succinctlabs/sp1/blob/013c24ea2fa15a0e7ed94f7d11a7ada4baa39ab9/crates/zkvm/entrypoint/src/syscalls/keccak_permute.rs
@@ -323,4 +325,23 @@ pub extern "C" fn syscall_uint256_mul(x: &mut [u32; 8], y_and_modulus: &[u32; 16
 
     #[cfg(not(target_os = "zkvm"))]
     unreachable!()
+}
+
+/// phantom syscall
+pub fn syscall_phantom_log_pc_cycle(label: &str) {
+    #[cfg(target_os = "zkvm")]
+    unsafe {
+        let ptr = label.as_ptr();
+        let len = label.len();
+
+        asm!(
+        "ecall",
+        in("t0") PHANTOM_LOG_PC_CYCLE,
+        in("a0") ptr,
+        in("a1") len,
+        );
+    }
+
+    #[cfg(not(target_os = "zkvm"))]
+    unreachable!("syscall_log_pc_cycle should only run inside zkvm");
 }
