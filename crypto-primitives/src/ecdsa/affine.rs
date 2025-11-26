@@ -11,6 +11,8 @@
 use super::{
     AffinePointTrait, ECDSACurve, ECDSAPoint, FIELD_BYTES_SIZE_USIZE, Field, FieldElement,
 };
+#[cfg(feature = "profiling")]
+use ceno_syscall::syscall_phantom_log_pc_cycle;
 
 use elliptic_curve::{
     FieldBytes, PrimeField,
@@ -134,7 +136,9 @@ impl<C: ECDSACurve> ToEncodedPoint<C> for CenoAffinePoint<C> {
 
 impl<C: ECDSACurve> DecompressPoint<C> for CenoAffinePoint<C> {
     fn decompress(x_bytes: &FieldBytes<C>, y_is_odd: Choice) -> CtOption<Self> {
-        FieldElement::<C>::from_bytes(x_bytes).and_then(|x| {
+        #[cfg(feature = "profiling")]
+        syscall_phantom_log_pc_cycle("decompress start");
+        let res = FieldElement::<C>::from_bytes(x_bytes).and_then(|x| {
             let alpha = (x * x * x) + (C::EQUATION_A * x) + C::EQUATION_B;
             let beta = alpha.sqrt();
 
@@ -151,7 +155,10 @@ impl<C: ECDSACurve> DecompressPoint<C> for CenoAffinePoint<C> {
                 // X is normalized by virtue of being created via `FromBytes`.
                 CenoAffinePoint::from_field_elements_unchecked(x, y.normalize())
             })
-        })
+        });
+        #[cfg(feature = "profiling")]
+        syscall_phantom_log_pc_cycle("decompress end");
+        res
     }
 }
 
