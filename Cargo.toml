@@ -9,10 +9,7 @@ version = "0.1.0"
 
 [workspace]
 resolver = "2"
-members = [
-    "crypto-primitives",
-    "syscall",
-]
+members = ["crypto-primitives", "syscall"]
 
 # Fastest runtime configuration
 [profile.release]

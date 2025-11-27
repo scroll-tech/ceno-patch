@@ -13,10 +13,12 @@ use super::{
 };
 #[cfg(feature = "profiling")]
 use ceno_syscall::syscall_phantom_log_pc_cycle;
+use ceno_syscall::syscall_secp256k1_decompress;
 
 use elliptic_curve::{
     FieldBytes, PrimeField,
     ff::Field as _,
+    generic_array::GenericArray,
     group::GroupEncoding,
     point::{AffineCoordinates, DecompactPoint, DecompressPoint},
     sec1::{self, CompressedPoint, EncodedPoint, FromEncodedPoint, ToEncodedPoint},
@@ -138,27 +140,30 @@ impl<C: ECDSACurve> DecompressPoint<C> for CenoAffinePoint<C> {
     fn decompress(x_bytes: &FieldBytes<C>, y_is_odd: Choice) -> CtOption<Self> {
         #[cfg(feature = "profiling")]
         syscall_phantom_log_pc_cycle("decompress start");
-        let res = FieldElement::<C>::from_bytes(x_bytes).and_then(|x| {
-            let alpha = (x * x * x) + (C::EQUATION_A * x) + C::EQUATION_B;
-            let beta = alpha.sqrt();
-
-            beta.map(|beta| {
-                // Ensure the element is normalized for consistency.
-                let beta = beta.normalize();
-
-                let y = FieldElement::<C>::conditional_select(
-                    &beta.neg(),
-                    &beta,
-                    beta.is_odd().ct_eq(&y_is_odd),
-                );
-
-                // X is normalized by virtue of being created via `FromBytes`.
-                CenoAffinePoint::from_field_elements_unchecked(x, y.normalize())
-            })
-        });
-        #[cfg(feature = "profiling")]
-        syscall_phantom_log_pc_cycle("decompress end");
-        res
+        let mut data = [0u8; 64];
+        let is_odd = match y_is_odd.unwrap_u8() {
+            0 => false,
+            1 => true,
+            _ => panic!("illegal y_is_odd"),
+        };
+        // copy x to input data
+        data[0..32].copy_from_slice(&x_bytes[0..32]);
+        syscall_secp256k1_decompress(&mut data, is_odd);
+        let x = FieldElement::<C>::from_bytes(GenericArray::from_slice(&data[0..32]));
+        let y = FieldElement::<C>::from_bytes(GenericArray::from_slice(&data[32..64]));
+        if let Some(p) = x
+            .into_option()
+            .zip(y.into_option())
+            .map(|(x, y)| CenoAffinePoint::from_field_elements_unchecked(x, y.normalize()))
+        {
+            #[cfg(feature = "profiling")]
+            syscall_phantom_log_pc_cycle("decompress end");
+            CtOption::new(p, 1.into())
+        } else {
+            #[cfg(feature = "profiling")]
+            syscall_phantom_log_pc_cycle("decompress end");
+            CtOption::new(CenoAffinePoint::identity(), 0.into())
+        }
     }
 }
 

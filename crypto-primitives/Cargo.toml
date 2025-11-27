@@ -14,5 +14,5 @@ ceno_syscall = { path = "../syscall" }
 elliptic-curve = { version = "0.13.8", features = ["hazmat", "sec1", "ecdh"] }
 
 [features]
-default=[]
-profiling=[]
+default = []
+profiling = []
