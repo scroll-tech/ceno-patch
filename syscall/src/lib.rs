@@ -5,6 +5,8 @@ pub const KECCAK_PERMUTE: u32 = 0x00_01_01_09;
 pub const SECP256K1_ADD: u32 = 0x00_01_01_0A;
 pub const SECP256K1_DOUBLE: u32 = 0x00_00_01_0B;
 pub const SECP256K1_DECOMPRESS: u32 = 0x00_00_01_0C;
+pub const SECP256K1_SCALAR_SQRT: u32 = 0x00_00_01_0D;
+pub const SECP256K1_SCALAR_INVERT: u32 = 0x00_00_01_0E;
 pub const SHA_EXTEND: u32 = 0x00_30_01_05;
 pub const BN254_ADD: u32 = 0x00_01_01_0E;
 pub const BN254_DOUBLE: u32 = 0x00_00_01_0F;
@@ -127,6 +129,21 @@ pub fn syscall_secp256k1_decompress(point: &mut [u8; 64], is_odd: bool) {
 
     #[cfg(not(target_os = "zkvm"))]
     unreachable!()
+}
+
+#[allow(unused_variables)]
+pub fn syscall_secp256k1_invert(p: &mut [u32; 8]) {
+    #[cfg(target_os = "zkvm")]
+    {
+        let p = p.as_mut_ptr();
+        unsafe {
+            asm!(
+            "ecall",
+            in("t0") SECP256K1_SCALAR_INVERT,
+            in("a0") p
+            );
+        }
+    }
 }
 
 /// Based on: https://github.com/succinctlabs/sp1/blob/2aed8fea16a67a5b2983ffc471b2942c2f2512c8/crates/zkvm/entrypoint/src/syscalls/sha_extend.rs#L12
