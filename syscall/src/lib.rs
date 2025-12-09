@@ -93,8 +93,7 @@ pub fn syscall_secp256k1_double(p: &mut [u32; 16]) {
         asm!(
         "ecall",
         in("t0") SECP256K1_DOUBLE,
-        in("a0") p,
-        in("a1") 0
+        in("a0") p
         );
     }
 
@@ -157,8 +156,7 @@ pub fn syscall_sha256_extend(w: &mut [u32; 64]) {
             asm!(
             "ecall",
             in("t0") SHA_EXTEND,
-            in("a0") w,
-            in("a1") 0
+            in("a0") w
             );
         }
     }
