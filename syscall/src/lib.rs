@@ -20,6 +20,7 @@ pub const BLS12381_DOUBLE: u32 = 0x00_00_01_1F;
 pub const SECP256R1_ADD: u32 = 0x00_01_01_2C;
 pub const SECP256R1_DOUBLE: u32 = 0x00_00_01_2D;
 pub const SECP256R1_DECOMPRESS: u32 = 0x00_00_01_2E;
+pub const SECP256R1_SCALAR_INVERT: u32 = 0x00_00_01_2F;
 pub const UINT256_MUL: u32 = 0x00_01_01_1D;
 
 pub const PHANTOM_LOG_PC_CYCLE: u32 = 0x00_00_00_03;
@@ -139,6 +140,72 @@ pub fn syscall_secp256k1_invert(p: &mut [u32; 8]) {
             asm!(
             "ecall",
             in("t0") SECP256K1_SCALAR_INVERT,
+            in("a0") p
+            );
+        }
+    }
+}
+
+/// Refer syscall_secp256k1_add
+///
+/// ### Spec
+/// - The caller must ensure that `p` and `q` are valid pointers to data that is aligned along a four
+///   byte boundary.
+/// - Point representation: the first `8` words describe the X-coordinate, the last `8` describe the Y-coordinate. Each
+///   coordinate is encoded as follows: its `32` bytes are ordered from lowest significance to highest and then stored into little endian words.
+///   For example, the word `p[0]` contains the least significant `4` bytes of `X` and their significance is maintained w.r.t `p[0]`
+/// - The caller must ensure that `p` and `q` are valid points on the `secp256r1` curve, and that `p` and `q` are not equal to each other.
+/// - The result is stored in the first point.
+#[allow(unused_variables)]
+pub fn syscall_secp256r1_add(p: &mut [u32; 16], q: &[u32; 16]) {
+    #[cfg(target_os = "zkvm")]
+    unsafe {
+        let p = p.as_mut_ptr();
+        let q = q.as_ptr();
+        asm!(
+        "ecall",
+        in("t0") SECP256R1_ADD,
+        in("a0") p,
+        in("a1") q
+        );
+    }
+
+    #[cfg(not(target_os = "zkvm"))]
+    unreachable!()
+}
+
+/// Follow syscall_secp256k1_double
+/// ### Spec
+/// - The caller must ensure that `p` is a valid pointer to data that is aligned along a four byte boundary.
+/// - Point representation: the first `8` words describe the X-coordinate, the last `8` describe the Y-coordinate. Each
+///   coordinate is encoded as follows: its `32` bytes are ordered from lowest significance to highest and then stored into little endian words.
+///   For example, the word `p[0]` contains the least significant `4` bytes of `X` and their significance is maintained w.r.t `p[0]`
+/// - The result is stored in p
+#[allow(unused_variables)]
+pub fn syscall_secp256r1_double(p: &mut [u32; 16]) {
+    #[cfg(target_os = "zkvm")]
+    unsafe {
+        let p = p.as_mut_ptr();
+        asm!(
+        "ecall",
+        in("t0") SECP256R1_DOUBLE,
+        in("a0") p
+        );
+    }
+
+    #[cfg(not(target_os = "zkvm"))]
+    unreachable!()
+}
+
+#[allow(unused_variables)]
+pub fn syscall_secp256r1_invert(p: &mut [u32; 8]) {
+    #[cfg(target_os = "zkvm")]
+    {
+        let p = p.as_mut_ptr();
+        unsafe {
+            asm!(
+            "ecall",
+            in("t0") SECP256R1_SCALAR_INVERT,
             in("a0") p
             );
         }
