@@ -212,18 +212,17 @@ pub fn syscall_secp256r1_invert(p: &mut [u32; 8]) {
     }
 }
 
-/// Based on: https://github.com/succinctlabs/sp1/blob/2aed8fea16a67a5b2983ffc471b2942c2f2512c8/crates/zkvm/entrypoint/src/syscalls/sha_extend.rs#L12
-/// Executes the SHA256 extend operation on the given word array.
+/// Executes one SHA256 extend round in place.
 #[allow(unused_variables)]
-pub fn syscall_sha256_extend(w: &mut [u32; 64]) {
+pub fn syscall_sha256_extend(w_i: &mut u32) {
     #[cfg(target_os = "zkvm")]
     {
-        let w = w.as_mut_ptr();
+        let w_i = w_i as *mut u32;
         unsafe {
             asm!(
             "ecall",
             in("t0") SHA_EXTEND,
-            in("a0") w
+            in("a0") w_i,
             );
         }
     }
