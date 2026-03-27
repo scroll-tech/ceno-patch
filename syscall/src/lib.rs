@@ -24,6 +24,10 @@ pub const SECP256R1_SCALAR_INVERT: u32 = 0x00_00_01_2F;
 pub const UINT256_MUL: u32 = 0x00_01_01_1D;
 
 pub const PHANTOM_LOG_PC_CYCLE: u32 = 0x00_00_00_03;
+pub const PHANTOM_LOG_PRINT: u32 = 0x00_00_00_04;
+
+pub const PUB_IO_COMMIT: u32 = 0x00_00_00_10;
+pub const STATE_CONTINUATION: u32 = 0x00_00_00_11;
 
 pub const KECCAK_STATE_WORDS: usize = 25;
 
@@ -425,4 +429,55 @@ pub fn syscall_phantom_log_pc_cycle(label: &str) {
 
     #[cfg(not(target_os = "zkvm"))]
     unreachable!("syscall_log_pc_cycle should only run inside zkvm");
+}
+
+/// Prints a formatted log line inside the phantom host.
+pub fn syscall_phantom_log_print(message: &str) {
+    #[cfg(target_os = "zkvm")]
+    unsafe {
+        let ptr = message.as_ptr();
+        let len = message.len();
+
+        asm!(
+        "ecall",
+        in("t0") PHANTOM_LOG_PRINT,
+        in("a0") ptr,
+        in("a1") len,
+        );
+    }
+
+    #[cfg(not(target_os = "zkvm"))]
+    unreachable!("syscall_phantom_log_print should only run inside zkvm");
+}
+
+/// Commit a 256-bit value to the public IO channel.
+#[allow(unused_variables)]
+pub fn syscall_pub_io_commit(value: &[u32; 8]) {
+    #[cfg(target_os = "zkvm")]
+    unsafe {
+        let ptr = value.as_ptr();
+
+        asm!(
+        "ecall",
+        in("t0") PUB_IO_COMMIT,
+        in("a0") ptr,
+        );
+    }
+
+    #[cfg(not(target_os = "zkvm"))]
+    unreachable!("syscall_pub_io_commit should only run inside zkvm");
+}
+
+/// Advances the VM state to the continuation point for the next execution phase.
+pub fn syscall_state_continuation() {
+    #[cfg(target_os = "zkvm")]
+    unsafe {
+        asm!(
+        "ecall",
+        in("t0") STATE_CONTINUATION,
+        );
+    }
+
+    #[cfg(not(target_os = "zkvm"))]
+    unreachable!("syscall_state_continuation should only run inside zkvm");
 }
