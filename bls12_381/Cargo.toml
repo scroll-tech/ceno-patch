@@ -1,0 +1,55 @@
+[package]
+name = "bls12_381"
+version = "0.8.0"
+authors = [
+    "Sean Bowe <ewillbefull@gmail.com>",
+    "Jack Grigg <thestr4d@gmail.com>",
+]
+edition = "2021"
+rust-version = "1.63"
+description = "Implementation of the BLS12-381 pairing-friendly elliptic curve construction"
+documentation = "https://docs.rs/bls12_381/"
+homepage = "https://github.com/zkcrypto/bls12_381"
+repository = "https://github.com/zkcrypto/bls12_381"
+license = "MIT/Apache-2.0"
+
+# Ceno keeps this fork source-comparable with zkcrypto/bls12_381 v0.8.0
+# (upstream revision 6bb96951d5c2035caf4989b6e4a018435379590f).
+# The only guest-specific changes route Fp/Fp2 arithmetic through constrained
+# Ceno syscalls; native builds retain the upstream implementation.
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "katex-header.html"]
+
+[dependencies]
+digest = { version = "0.10", optional = true }
+ff = { version = "0.13", default-features = false }
+group = { version = "0.13", optional = true, default-features = false }
+pairing = { version = "0.23", optional = true }
+rand_core = { version = "0.6", default-features = false }
+subtle = { version = "2.2.1", default-features = false }
+zeroize = { version = "1.4", optional = true, default-features = false }
+
+[target.'cfg(target_os = "zkvm")'.dependencies]
+ceno_syscall = { path = "../syscall" }
+
+[dev-dependencies]
+csv = ">= 1.0, < 1.2" # csv 1.2 has MSRV 1.60
+criterion = "0.3"
+hex-literal = "0.3"
+rand_xorshift = "0.3"
+sha2 = "0.10"
+sha3 = "0.10"
+
+[features]
+default = ["groups", "pairings", "alloc", "bits"]
+bits = ["ff/bits"]
+groups = ["group"]
+pairings = ["groups", "pairing"]
+alloc = ["group/alloc"]
+experimental = ["digest", "groups"]
+nightly = ["subtle/nightly"]
+
+# Upstream integration tests and Criterion benches are not vendored because
+# Ceno consumes only the no_std library. The upstream in-module test suite is
+# retained and runs with `cargo test -p bls12_381 --lib`.

@@ -17,6 +17,12 @@ pub const BN254_FP2_MUL: u32 = 0x00_01_01_2B;
 pub const BLS12381_DECOMPRESS: u32 = 0x00_00_01_1C;
 pub const BLS12381_ADD: u32 = 0x00_01_01_1E;
 pub const BLS12381_DOUBLE: u32 = 0x00_00_01_1F;
+pub const BLS12381_FP_ADD: u32 = 0x00_01_01_20;
+pub const BLS12381_FP_SUB: u32 = 0x00_01_01_21;
+pub const BLS12381_FP_MUL: u32 = 0x00_01_01_22;
+pub const BLS12381_FP2_ADD: u32 = 0x00_01_01_23;
+pub const BLS12381_FP2_SUB: u32 = 0x00_01_01_24;
+pub const BLS12381_FP2_MUL: u32 = 0x00_01_01_25;
 pub const SECP256R1_ADD: u32 = 0x00_01_01_2C;
 pub const SECP256R1_DOUBLE: u32 = 0x00_00_01_2D;
 pub const SECP256R1_DECOMPRESS: u32 = 0x00_00_01_2E;
@@ -387,6 +393,87 @@ pub extern "C" fn syscall_bn254_fp2_mulmod(x: &mut [u32; 16], y: &[u32; 16]) {
     #[cfg(not(target_os = "zkvm"))]
     unreachable!()
 }
+
+/// Adds two BLS12-381 G1 points in canonical little-endian word representation.
+///
+/// The result is written over the first input.
+#[allow(unused_variables)]
+#[unsafe(no_mangle)]
+pub extern "C" fn syscall_bls12381_add(p: &mut [u32; 24], q: &[u32; 24]) {
+    #[cfg(target_os = "zkvm")]
+    unsafe {
+        asm!(
+            "ecall",
+            in("t0") BLS12381_ADD,
+            in("a0") p.as_mut_ptr(),
+            in("a1") q.as_ptr(),
+        );
+    }
+    #[cfg(not(target_os = "zkvm"))]
+    unreachable!()
+}
+
+/// Doubles a BLS12-381 G1 point in canonical little-endian word representation.
+#[allow(unused_variables)]
+#[unsafe(no_mangle)]
+pub extern "C" fn syscall_bls12381_double(p: &mut [u32; 24]) {
+    #[cfg(target_os = "zkvm")]
+    unsafe {
+        asm!(
+            "ecall",
+            in("t0") BLS12381_DOUBLE,
+            in("a0") p.as_mut_ptr(),
+            in("a1") 0,
+        );
+    }
+    #[cfg(not(target_os = "zkvm"))]
+    unreachable!()
+}
+
+/// Decompresses a BLS12-381 G1 x-coordinate in canonical little-endian word
+/// representation and writes the y-coordinate into the second half.
+#[allow(unused_variables)]
+#[unsafe(no_mangle)]
+pub extern "C" fn syscall_bls12381_decompress(point: &mut [u32; 24], sign: bool) {
+    #[cfg(target_os = "zkvm")]
+    unsafe {
+        asm!(
+            "ecall",
+            in("t0") BLS12381_DECOMPRESS,
+            in("a0") point.as_mut_ptr(),
+            in("a1") sign as u8,
+        );
+    }
+    #[cfg(not(target_os = "zkvm"))]
+    unreachable!()
+}
+
+macro_rules! bls12381_binary_syscall {
+    ($name:ident, $code:ident, $words:expr) => {
+        #[allow(unused_variables)]
+        #[unsafe(no_mangle)]
+        pub extern "C" fn $name(x: &mut [u32; $words], y: &[u32; $words]) {
+            #[cfg(target_os = "zkvm")]
+            unsafe {
+                asm!(
+                    "ecall",
+                    in("t0") $code,
+                    in("a0") x.as_mut_ptr(),
+                    in("a1") y.as_ptr(),
+                );
+            }
+            #[cfg(not(target_os = "zkvm"))]
+            unreachable!()
+        }
+    };
+}
+
+bls12381_binary_syscall!(syscall_bls12381_fp_addmod, BLS12381_FP_ADD, 12);
+bls12381_binary_syscall!(syscall_bls12381_fp_submod, BLS12381_FP_SUB, 12);
+bls12381_binary_syscall!(syscall_bls12381_fp_mulmod, BLS12381_FP_MUL, 12);
+bls12381_binary_syscall!(syscall_bls12381_fp2_addmod, BLS12381_FP2_ADD, 24);
+bls12381_binary_syscall!(syscall_bls12381_fp2_submod, BLS12381_FP2_SUB, 24);
+bls12381_binary_syscall!(syscall_bls12381_fp2_mulmod, BLS12381_FP2_MUL, 24);
 
 /// Uint256 multiplication operation.
 ///
