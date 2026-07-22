@@ -2,6 +2,7 @@
 use core::arch::asm;
 
 pub const KECCAK_PERMUTE: u32 = 0x00_01_01_09;
+pub const KECCAK_XORIN: u32 = 0x00_01_01_30;
 pub const SECP256K1_ADD: u32 = 0x00_01_01_0A;
 pub const SECP256K1_DOUBLE: u32 = 0x00_00_01_0B;
 pub const SECP256K1_DECOMPRESS: u32 = 0x00_00_01_0C;
@@ -36,6 +37,7 @@ pub const PUB_IO_COMMIT: u32 = 0x00_00_00_10;
 pub const STATE_CONTINUATION: u32 = 0x00_00_00_11;
 
 pub const KECCAK_STATE_WORDS: usize = 25;
+pub const KECCAK_RATE_WORDS: usize = 34;
 
 /// Based on https://github.com/succinctlabs/sp1/blob/013c24ea2fa15a0e7ed94f7d11a7ada4baa39ab9/crates/zkvm/entrypoint/src/syscalls/keccak_permute.rs
 /// Executes the Keccak256 permutation on the given state.
@@ -52,6 +54,31 @@ pub fn syscall_keccak_permute(state: &mut [u64; KECCAK_STATE_WORDS]) {
         "ecall",
         in("t0") KECCAK_PERMUTE,
         in("a0") state as *mut [u64; 25],
+        );
+    }
+    #[cfg(not(target_os = "zkvm"))]
+    unreachable!()
+}
+
+/// XORs one zero-padded Keccak rate block into the first 136 bytes of `state`.
+///
+/// ### Spec
+///
+/// - `state` and `block` must be aligned to a four-byte boundary.
+/// - `state` and `block` must not overlap.
+/// - The entire fixed-width block is consumed, including zero padding.
+#[allow(unused_variables)]
+pub fn syscall_keccak_xorin(
+    state: &mut [u64; KECCAK_STATE_WORDS],
+    block: &[u32; KECCAK_RATE_WORDS],
+) {
+    #[cfg(target_os = "zkvm")]
+    unsafe {
+        asm!(
+            "ecall",
+            in("t0") KECCAK_XORIN,
+            in("a0") state.as_mut_ptr(),
+            in("a1") block.as_ptr(),
         );
     }
     #[cfg(not(target_os = "zkvm"))]
